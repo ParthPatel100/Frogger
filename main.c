@@ -29,7 +29,6 @@
     
 //~ }
 
-
 //set pin 10 to input
             //10%10 = 0 ... so line 0
             //gpioPtr[0] = (gpioPtr[0] & ~(0b111<<0)) | (0b000<<0);
