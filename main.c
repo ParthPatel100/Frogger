@@ -237,6 +237,7 @@ int main()
 		if(buttonCode != sameButton){
 		    print_Message(buttonCode);
 		    printf("Press a button...\n");
+		    //~ wait(180000);
 		}
 		sameButton = buttonCode;
             }
@@ -268,13 +269,5 @@ int main()
         
 
                 
-    
-    
-    
-    
-    
-    
-
-    
     return 0;
 }
