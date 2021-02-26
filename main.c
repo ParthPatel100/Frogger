@@ -108,6 +108,8 @@ void wait(int waitTime)
 void print_Message(int button)
 {
     char * string[] = {"B", "Y", "Select", "Start", "Joy-Pad UP", "Joy-Pad DOWN", "Joy-Pad LEFT", "Joy-Pad RIGHT", "A", "X", "L", "R", "?", "?", "?", "?", "?" };
+    
+    //If the Start button is pressed, terminate the program and exit
     if(button == 3)
     {
         printf("Program is terminating...\n");
