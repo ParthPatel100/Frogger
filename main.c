@@ -1,4 +1,4 @@
- //Parth Patel
+//Parth Patel
 //30096473
 
 //Shailly Patel
@@ -15,38 +15,6 @@
 #include "initGPIO.h"
 #include <wiringPi.h>
 #include <stdlib.h>
-
-//DELETE THIS
-//~ void initInput(int pin, unsigned int *gpio)
-//~ {
-    //~ *(gpio+(pin/10)) = (*(gpio+(pin/10)) & ~(0b111<<(pin%10*3))) | (0b000<<(pin%10*3));
-    
-//~ }
-
-//~ void initOutput(int pin, unsigned int *gpio)
-//~ {
-    //~ *(gpio+(pin/10)) = (*(gpio+(pin/10)) & ~(0b111<<(pin%10*3))) | (0b001<<(pin%10*3));
-    
-//~ }
-
-//set pin 10 to input
-            //10%10 = 0 ... so line 0
-            //gpioPtr[0] = (gpioPtr[0] & ~(0b111<<0)) | (0b000<<0);
-            //initInput(10, gpioPtr);
-            
-            //set pin 9 to output
-            //9/10 = 0 
-            //9%10 = 9
-            //gpioPtr[0] = (gpioPtr[0] & ~(0b111<<27)) | (0b001<<27);
-            //initOutput(9, gpioPtr);
-            
-            
-            //set pin 11 to output
-            //11/10 = 1
-            //11%10 = 1
-            //gpioPtr[1] = (gpioPtr[1] & (0b111<<3)) | (0b001<<3);
-            //initOutput(11, gpioPtr);
-
 
 
 //function: init_GPIO
@@ -131,6 +99,10 @@ void wait(int waitTime)
     return delayMicroseconds(waitTime);
 }
 
+//function: print_Message
+//parameters: button
+//return: none
+//functionality: Prints an appropriate message depending on which button was pressed
 void print_Message(int button)
 {
     char * string[] = {"B", "Y", "Sl", "St", "Up", "Down", "Left", "Right", "A", "X", "L", "R", "?", "?", "?", "?", "?" };
@@ -145,6 +117,10 @@ void print_Message(int button)
     }
 }
 
+//function: read_SNES
+//parameters: gpioPtr
+//return: code of the button pressed
+//functionality: loop 16 times to check if a button is pressedon the SNES controller
 int read_SNES(unsigned int *gpioPtr)
 {
 
@@ -173,17 +149,13 @@ int read_SNES(unsigned int *gpioPtr)
         {
             return i;
         }
-        //set pin 11
-        //gpioPtr[7] = 1<<11;
+        
         write_CLOCK(gpioPtr, 1);
     }
-    //~ }
     
     return -1;
     
 }
-
-
 
 int main()
 {
@@ -192,81 +164,54 @@ int main()
     
     // get gpio pointer
     unsigned int *gpioPtr = getGPIOPtr();  
-    //printf("Press a button...\n");
+
     int buttonCode;
     int sameButton = -2;
-    //~ while (buttonTracker == 0)
-    //~ {
-       // buttonCode = 0;
-       
-       do
-       {
-       printf("Press a button...\n");
-        do
+    
+    printf("Press a button...\n");
+    
+    do
+    {
+        
+        init_GPIO(gpioPtr);
+        
+        
+        //gpioPtr[7] = 1<<9;
+        
+        //set pin 9
+        write_LATCH(gpioPtr, 1);
+        
+        
+        //delay 12 microseconds
+        wait(12);
+        
+        //clear pin 9
+        //offset is 0x28 -> 10 
+        //gpioPtr[10] = 1<<9;
+        write_LATCH(gpioPtr, 0);
+
+    
+        //readSNES 
+        buttonCode = read_SNES(gpioPtr);
+        if(buttonCode >= 0)
         {
-            
-            init_GPIO(gpioPtr);
-            
-            
-            //gpioPtr[7] = 1<<9;
-            
-            //set pin 9
-            write_LATCH(gpioPtr, 1);
-            
-            
-            //delay 12 microseconds
-            //delayMicroseconds(12);
-            wait(12);
-            
-            //clear pin 9
-            //offset is 0x28 -> 10 
-            //gpioPtr[10] = 1<<9;
-            write_LATCH(gpioPtr, 0);
-
-            
-            //printf("butC: %d\n", buttonCode);
-            
-        
-            //readSNES 
-	    buttonCode = read_SNES(gpioPtr);
-	    //~ printf("buttonCode %d\n", buttonCode);
-            if(buttonCode >= 0)
+            write_CLOCK(gpioPtr, 1);
+            if(buttonCode != sameButton)
             {
-                write_CLOCK(gpioPtr, 1);
-		if(buttonCode != sameButton){
-		    print_Message(buttonCode);
-		    printf("Press a button...\n");
-		    //~ wait(180000);
-		}
-		sameButton = buttonCode;
+                print_Message(buttonCode);
+                printf("Press a button...\n");
+                wait(180000); //This is to reduce the effects of the sensitvity of the controller
             }
+            sameButton = buttonCode;
+        }
+    
+        if (buttonCode == -1)
+        {
+            sameButton = -2;   
+        }
         
-            if (buttonCode == -1){
-		sameButton = -2;   
-	    }
-            //~ if(buttonCode >= 0)
-            //~ {
-                //~ printf("1\n");
-                //~ //buttonTracker = 0;
-
-                //~ break;
-            //~ }
-        
-        }while(1);
-        //~ printf("buttonCode2 %d\n", read_SNES(gpioPtr));
-        //~ printf("%d\n", buttonTracker);
-	//~ printf("HEllo\n");
-        //~ buttonTracker = 0;
-	//~ butCheck = read_SNES(gp)
-        
-        //~ printf("World\n");
-        //~ printf("2\n");
-        //~ printf("%d\n", buttonCode);
-        //~ printf("%d\n", buttonTracker);
-        
-        }while(1);
-        
-
-                
+    } while(1);
+  
     return 0;
 }
+
