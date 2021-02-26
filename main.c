@@ -1,3 +1,4 @@
+
 //Parth Patel
 //30096473
 
@@ -47,11 +48,12 @@ void write_LATCH(unsigned int *gpioPtr, int bit)
     //clear pin 9
     if (bit == 0)
     {
-        //offset is 0x28 -> 10 
         gpioPtr[10] = 1<<9;
         
     }
-    else if (bit == 1) //set pin 9
+    
+    //set pin 9
+    else if (bit == 1) 
     {
         gpioPtr[7] = 1<<9;
     }
@@ -105,7 +107,7 @@ void wait(int waitTime)
 //functionality: Prints an appropriate message depending on which button was pressed
 void print_Message(int button)
 {
-    char * string[] = {"B", "Y", "Sl", "St", "Up", "Down", "Left", "Right", "A", "X", "L", "R", "?", "?", "?", "?", "?" };
+    char * string[] = {"B", "Y", "Select", "Start", "Joy-Pad UP", "Joy-Pad DOWN", "Joy-Pad LEFT", "Joy-Pad RIGHT", "A", "X", "L", "R", "?", "?", "?", "?", "?" };
     if(button == 3)
     {
         printf("Program is terminating...\n");
@@ -125,31 +127,25 @@ int read_SNES(unsigned int *gpioPtr)
 {
 
     int value = 0;
-    //~ printf("buttonPressed : %d\n", *butPressed); 
-    //~ if(*butPressed == 0){
     for(int i = 0; i < 16; i++)
     {
 
-        //delayMicroseconds(6);
         wait(6);
 
         //clear pin 11
-        //gpioPtr[10] = 1<<11;
         write_CLOCK(gpioPtr, 0);
 
-        //delayMicroseconds(6);
         wait(6);
 
-
-        //value = gpioPtr[13] & (1<<10);
         value = read_DATA(gpioPtr);
         
-
+	//return the button code value which indicates which button was pressed 
         if (value == 0 && i < 12)
         {
             return i;
         }
         
+	//set pin 11
         write_CLOCK(gpioPtr, 1);
     }
     
@@ -165,46 +161,53 @@ int main()
     // get gpio pointer
     unsigned int *gpioPtr = getGPIOPtr();  
 
+    //button code to specify which button was pressed
     int buttonCode;
+    
+    //sameButton which keeps track of which button is being held to avoid printing it again.
     int sameButton = -2;
     
     printf("Press a button...\n");
     
     do
     {
-        
+        //intialize the pins
         init_GPIO(gpioPtr);
-        
-        
-        //gpioPtr[7] = 1<<9;
         
         //set pin 9
         write_LATCH(gpioPtr, 1);
-        
         
         //delay 12 microseconds
         wait(12);
         
         //clear pin 9
         //offset is 0x28 -> 10 
-        //gpioPtr[10] = 1<<9;
         write_LATCH(gpioPtr, 0);
 
-    
         //readSNES 
         buttonCode = read_SNES(gpioPtr);
+	
+	//when a button is pressed, buttonCode >= 0
         if(buttonCode >= 0)
         {
+	    //set pin 11
             write_CLOCK(gpioPtr, 1);
+	    
+	    //when the button that was pressed is let go, buttonCode will be equal to -1 but sameButton will be equal to the previous button code
+	    //in which case, the if condition is passed and asks the user to press a button
             if(buttonCode != sameButton)
             {
+		//print the message displaying what message was printed 
                 print_Message(buttonCode);
                 printf("Press a button...\n");
                 wait(180000); //This is to reduce the effects of the sensitvity of the controller
             }
+	    
+	    //set sameButton to the buttonCode of which button is being pressed
             sameButton = buttonCode;
         }
     
+	//re-initialize sameButton if no button is pressed
         if (buttonCode == -1)
         {
             sameButton = -2;   
