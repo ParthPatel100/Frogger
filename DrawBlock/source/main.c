@@ -65,17 +65,11 @@ void cleanBackground(Pixel *pixel, int startingPoint){
 
 /* main function */
 int main(){
-
-
 	/* initialize + get FBS */
 	framebufferstruct = initFbInfo();
-	
-
-	
 	/* initialize a pixel */
 	Pixel *pixel;
 	
-
 	pixel = malloc(sizeof(Pixel));
 	while(1){
 	drawBackground(pixel);
