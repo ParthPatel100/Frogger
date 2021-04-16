@@ -79,31 +79,31 @@ void drawGameScreen(Pixel *pixel){
 			pixel->y = y;
 			drawPixel(pixel);
 		}
+		
 	}
 }
-int getDirectionFromCon(int* frogLane, int* frogStart, int currentCode){
-	int buttonCode = getButtonPressed(currentCode);
+int getDirectionFromCon(int* frogLane, int* frogStart, unsigned int *gpioPtr){
+	int buttonCode = getButtonPressed(gpioPtr);
+	
 	int size =33;
-	//~ printf("lane %d\n", *frogLane);
-	//~ if(*frogLane >= 0 && *frogLane <= 10 && *frogStart>= 30 && *frogStart <= 800){
-
 		if (buttonCode == 5){
-			if(*frogLane < 23){
+			if(*frogLane < 21){
 				*frogLane += 1;
 			}
 		}
-		if (buttonCode == 4){
+		
+		else if (buttonCode == 4){
 			if(*frogLane > 0){
 				*frogLane -= 1;
 			}
 		}
-		if (buttonCode == 6){
-			if(*frogStart >= 30){
+		else if (buttonCode == 6){
+			if(*frogStart >= 264){
 				*frogStart -= 33;
 			}
 		}
-		if (buttonCode == 7){
-			if(*frogStart <= 770){
+		else if (buttonCode == 7){
+			if(*frogStart <= 528){
 				*frogStart += 33;
 			}
 		}
@@ -136,63 +136,58 @@ void drawFrog(Pixel *pixel, int xStartingPoint, int maxScreenX, int frogLane, in
 	short int *frogPtr=(short int *) froggie.pixel_data;
 	int i =0;
 	int x, y;
-	int size = 33;
+	int laneSize = 35;
+	int objSize = 33;
 	int xCordCleanStart;
 	int xCordCleanEnd;
 	int yCordCleanStart;
 	int yCordCleanEnd;
-	for (y = size*frogLane; y < size + (size*frogLane); y++)
+	for (y = laneSize*frogLane; y < laneSize + (laneSize*frogLane); y++)
 	{
-		for ( x = xStartingPoint; x < (size + xStartingPoint); x++) 
+		for ( x = xStartingPoint; x < (objSize + xStartingPoint); x++) 
 		{	
-			i++;
-			if (x>=0 && x< maxScreenX) {
-				pixel->color = frogPtr[i];
-				pixel->x = x;
-				pixel->y = y;
-				//draws the frog inside the screen and ignores the backgrounds of the frog image
-				if(x <= maxScreenX && frogPtr[i] >= -5000){
-					drawPixel(pixel);
+			if (y < objSize + laneSize*frogLane){
+				i++;
+				if (x>=0 && x< maxScreenX) {
+					pixel->color = frogPtr[i];
+					pixel->x = x;
+					pixel->y = y;
+					//draws the frog inside the screen and ignores the backgrounds of the frog image
+					if(x <= maxScreenX && frogPtr[i] >= -5000){
+						drawPixel(pixel);
+					}
 				}
 			}
 		}
 	}
 	if (direction >= 0){
 		if (direction == RIGHT){
-			xCordCleanStart = xStartingPoint - size;
+			xCordCleanStart = xStartingPoint - objSize;
 			xCordCleanEnd = xStartingPoint-1;
-			yCordCleanStart = size*frogLane;
-			yCordCleanEnd = y - 1;
+			yCordCleanStart = laneSize*frogLane;
+			yCordCleanEnd = y - 3;
 		}
 		else if (direction == LEFT){
 			xCordCleanStart = x;
-			xCordCleanEnd = xCordCleanStart + size;
-			yCordCleanStart = size*frogLane;
-			yCordCleanEnd = y - 1;
+			xCordCleanEnd = xCordCleanStart + objSize;
+			yCordCleanStart = objSize*frogLane;
+			yCordCleanEnd = y - 3;
 		}
 		else if(direction == UP){
 			xCordCleanStart = xStartingPoint;
 			xCordCleanEnd = x - 1;
-			yCordCleanStart = size + size*frogLane;
-			yCordCleanEnd = size + yCordCleanStart;	
+			yCordCleanStart = laneSize + laneSize*frogLane;
+			yCordCleanEnd = objSize + yCordCleanStart;	
 		}
 		else if(direction == DOWN){
 			xCordCleanStart = xStartingPoint;
 			xCordCleanEnd = x - 1;
-			yCordCleanStart = (size*frogLane) - size;
-			yCordCleanEnd = size*frogLane - 1;
+			yCordCleanStart = (laneSize*frogLane) - laneSize;
+			yCordCleanEnd = objSize + yCordCleanStart;
 		}
 		cleanBackground(pixel, xCordCleanStart, yCordCleanStart, xCordCleanEnd, yCordCleanEnd);
 	}
-	//~ if (x>=0){
-		//~ return xStartingPoint;
-	//~ }
-	//~ else{
-		//~ return 0;
-	//~ }
-	//~ delayMicroseconds(100000);
 }
-
 void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int direction){
 	short int *carPtr = 0;
 	if (direction == RIGHT){
@@ -203,25 +198,28 @@ void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int di
 	}
 	int i =0;
 	int x, y;
-	int size = 33;
+	int laneSize = 35;
+	int objSize = 33 ;
 	int xCordCleanStart;
 	int xCordCleanEnd;
 	int yCordCleanStart;
 	int yCordCleanEnd;
 	int startPoint = *carStart;
 	
-	for (y = size*objectLane; y < size + (size*objectLane); y++)
+	for (y = laneSize*objectLane; y < laneSize + (laneSize*objectLane); y++)
 	{
-		for (x = startPoint; x < (size + startPoint); x++) 
+		for (x = startPoint; x < (objSize + startPoint); x++) 
 		{	
-			//~ printf("%d", x);
-			i++;
-			if (x>=0 && x< maxScreenX ) {
-				pixel->color = carPtr[i];
-				pixel->x = x;
-				pixel->y = y;
-				if(x <= maxScreenX){
-					drawPixel(pixel);
+			if (y < objSize + (laneSize * objectLane)){
+				//~ printf("%d", x);
+				i++;
+				if (x >= 231 && x<= 563 ) {
+					pixel->color = carPtr[i];
+					pixel->x = x;
+					pixel->y = y;
+					if(x >= 0 && x <= maxScreenX){
+						drawPixel(pixel);
+					}
 				}
 			}
 		}
@@ -231,15 +229,15 @@ void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int di
 	if (direction == RIGHT){
 		xCordCleanStart = startPoint - 1;
 		xCordCleanEnd = startPoint - 1;
-		yCordCleanStart = size*objectLane;
-		yCordCleanEnd = y - 1;
+		yCordCleanStart = laneSize*objectLane;
+		yCordCleanEnd = yCordCleanStart + objSize;
 		*carStart +=1;
 	}
 	else if (direction == LEFT){
 		xCordCleanStart = x;
 		xCordCleanEnd = x ;
-		yCordCleanStart = size*objectLane;
-		yCordCleanEnd = y - 1;
+		yCordCleanStart = laneSize*objectLane;
+		yCordCleanEnd = yCordCleanStart + objSize;
 		*carStart -=1;
 	}
 	cleanBackground(pixel, xCordCleanStart, yCordCleanStart, xCordCleanEnd, yCordCleanEnd);
@@ -282,47 +280,42 @@ int main(){
 	int currentDirection = 1;
 	bool collided = false;
 	int frogStartPoint = 400;
-	int carStartPointFromRight = 800;
-	int carStartPointFromLeft = -33;
 	int testPoint = 800;
 	int currentCode = -2;	 
-	int cars[] = {600, 100, 0};
+	int cars[] = {561, 198, 0};
 	int carLanes[] = {4,5,6};
 	int carPos;
 	drawMainMenu(pixel);
 	drawGameScreen(pixel);
 	bool buttonPressed = false;	
+	  // get gpio pointer
+    unsigned int *gpioPtr = getGPIOPtr();  
 	
 	drawFrog(pixel, frogStartPoint, maxScreenX, frogLane, -1);
 	while(1){ 
-			for(int i = 0; i < 3; i++ ){
-				if (i == 0){
-					if (cars[i] <= 100){
-						cars[i] =  600;
-						
-					}
-				}
-				else if (i ==1){
-					if (cars[i] >= 600){
-						cars[i] = 100;
-						
-					}
-				}
+			if (cars[0] <= 205){
+				cars[0] = 561;
 			}
-			frogDirection = getDirectionFromCon(&frogLane, &frogStartPoint, currentCode);
-			delayMicroseconds(80000);
+			if (cars[1] >= 561){
+				cars[1] = 205;
+			}
+			//~ delayMicroseconds(60000);
+			frogDirection = getDirectionFromCon(&frogLane, &frogStartPoint, gpioPtr);
+
+			
 			drawFrog(pixel, frogStartPoint, maxScreenX, frogLane, frogDirection);
-			currentCode = frogDirection;
 			drawCar(pixel, &cars[0], maxScreenX, carLanes[0], LEFT);
 			drawCar(pixel, &cars[1], maxScreenX, carLanes[1], RIGHT);
 			for (int i = 0; i < 3; i++){
-			collided = checkCollision(pixel, frogStartPoint, cars[i], frogLane, carLanes[i]);
-			if(collided){
-				cleanBackground(pixel, frogStartPoint,  33*frogLane, frogStartPoint + 33 ,  33*frogLane + 33);
-				frogStartPoint = 400;
-				frogLane = 9;
-				}
+				collided = checkCollision(pixel, frogStartPoint, cars[i], frogLane, carLanes[i]);
+				if(collided){
+					//clean the dead frog from screen adn reset frog position
+					cleanBackground(pixel, frogStartPoint,  35*frogLane, frogStartPoint + 33 ,  35*frogLane + 33);
+					frogStartPoint = 400;
+					frogLane = 9;
+					}
 			}
+
 			
 			
 			

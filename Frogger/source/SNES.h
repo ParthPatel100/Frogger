@@ -152,19 +152,21 @@ int read_SNES(unsigned int *gpioPtr)
     
 }
 
-int getButtonPressed(int currentCode)
+int getButtonPressed(unsigned int *gpioPtr)
 {
 
-    // get gpio pointer
-    unsigned int *gpioPtr = getGPIOPtr();  
+    //~ // get gpio pointer
+    //~ unsigned int *gpioPtr = getGPIOPtr();  
 
     //button code to specify which button was pressed
     int buttonCode;
     
     //sameButton which keeps track of which button is being held to avoid printing it again.
+    int sameButton = -2;
     
     
-
+    //~ do
+    //~ {
         //intialize the pins
         init_GPIO(gpioPtr);
         
@@ -180,10 +182,6 @@ int getButtonPressed(int currentCode)
 
         //readSNES 
         buttonCode = read_SNES(gpioPtr);
-        
-        if(buttonCode == -1){
-			currentCode = -2;
-		}
 	
         //when a button is pressed, buttonCode >= 0
         if(buttonCode >= 0)
@@ -193,12 +191,13 @@ int getButtonPressed(int currentCode)
 	    
             //when the button that was pressed is let go, buttonCode will be equal to -1 but sameButton will be equal to the previous button code
             //in which case, the if condition is passed and asks the user to press a button
-            if(buttonCode != currentCode)
-            {
+            //~ if(buttonCode != currentCode)
+            //~ {
                 return buttonCode;
                 
-            }
+            //~ }
         }
         
+    //~ } while(1);
   
 }
