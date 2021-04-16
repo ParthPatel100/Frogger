@@ -88,7 +88,7 @@ int getDirectionFromCon(int* frogLane, int* frogStart, int currentCode){
 	//~ if(*frogLane >= 0 && *frogLane <= 10 && *frogStart>= 30 && *frogStart <= 800){
 
 		if (buttonCode == 5){
-			if(*frogLane <= 20){
+			if(*frogLane < 23){
 				*frogLane += 1;
 			}
 		}
@@ -310,7 +310,7 @@ int main(){
 				}
 			}
 			frogDirection = getDirectionFromCon(&frogLane, &frogStartPoint, currentCode);
-			delayMicroseconds(100000);
+			delayMicroseconds(80000);
 			drawFrog(pixel, frogStartPoint, maxScreenX, frogLane, frogDirection);
 			currentCode = frogDirection;
 			drawCar(pixel, &cars[0], maxScreenX, carLanes[0], LEFT);
