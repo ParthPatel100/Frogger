@@ -187,7 +187,7 @@ void drawFrog(Pixel *pixel, int xStartingPoint, int maxScreenX, int frogLane, in
 			yCordCleanStart = (laneSize*frogLane) - laneSize;
 			yCordCleanEnd = objSize + yCordCleanStart;
 		}
-		cleanBackground(pixel, xCordCleanStart, yCordCleanStart, xCordCleanEnd, yCordCleanEnd);
+		cleanBackground(pixel, xCordCleanStart, yCordCleanStart + 152, xCordCleanEnd, yCordCleanEnd + 152);
 	}
 }
 void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int direction){
@@ -315,9 +315,9 @@ int main(){
 				collided = checkCollision(pixel, frogStartPoint, cars[i], frogLane, carLanes[i]);
 				if(collided){
 					//clean the dead frog from screen adn reset frog position
-					cleanBackground(pixel, frogStartPoint,  35*frogLane, frogStartPoint + 33 ,  35*frogLane + 33);
+					cleanBackground(pixel, frogStartPoint,  152+(35*frogLane), frogStartPoint + 33 ,  152+(35*frogLane + 33));
 					frogStartPoint = 400;
-					frogLane = 16;
+					frogLane = 17;
 					}
 			}
 
