@@ -245,7 +245,7 @@ void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int di
 		yCordCleanEnd = yCordCleanStart + objSize;
 		*carStart -=1;
 	}
-	cleanBackground(pixel, xCordCleanStart, yCordCleanStart, xCordCleanEnd, yCordCleanEnd);
+	cleanBackground(pixel, xCordCleanStart, yCordCleanStart + 152, xCordCleanEnd, yCordCleanEnd + 152);
 	
 }
 
@@ -288,7 +288,7 @@ int main(){
 	int testPoint = 800;
 	int currentCode = -2;	 
 	int cars[] = {561, 198, 0};
-	int carLanes[] = {3,5,6};
+	int carLanes[] = {15,16,6};
 	int carPos;
 	drawMainMenu(pixel);
 	drawGameScreen(pixel);
@@ -317,7 +317,7 @@ int main(){
 					//clean the dead frog from screen adn reset frog position
 					cleanBackground(pixel, frogStartPoint,  35*frogLane, frogStartPoint + 33 ,  35*frogLane + 33);
 					frogStartPoint = 400;
-					frogLane = 9;
+					frogLane = 16;
 					}
 			}
 
