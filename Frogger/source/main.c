@@ -12,6 +12,8 @@
 #include "blueCar1.h"
 #include "redCar1.h"
 #include "GameScreen.h"
+#include "mainScreenOne.h"
+
 
 #define UP 4
 #define RIGHT 7
@@ -67,13 +69,13 @@ void drawMainMenu(Pixel *pixel){
 
 
 void drawGameScreen(Pixel *pixel){
-	short int *gameScreenPtr = (short int *) gameScreen.pixel_data;
+	short int *gamePtr = (short int *) game1.pixel_data;
 	int i = 0;
 	for (int y = 0; y < 800; y++)
 	{
 		for (int x = 0; x < 800; x++) 
 		{	 
-			pixel->color = gameScreenPtr[i];
+			pixel->color = gamePtr[i];
 			i++;
 			pixel->x = x;
 			pixel->y = y;
@@ -115,7 +117,7 @@ int getDirectionFromCon(int* frogLane, int* frogStart, unsigned int *gpioPtr){
 }
 
 void cleanBackground(Pixel *pixel, int xStart, int yStart, int xEnd, int yEnd){
-	short int *gameScreenPtr = (short int *) gameScreen.pixel_data;
+	short int *gamePtr = (short int *) game1.pixel_data;
 	int i = 0;
 
 	for(int x = xStart; x <= xEnd; x++){
@@ -124,7 +126,7 @@ void cleanBackground(Pixel *pixel, int xStart, int yStart, int xEnd, int yEnd){
 				i = (800 * y + x);
 				pixel->x = x;
 				pixel->y = y;
-				pixel->color = gameScreenPtr[i];
+				pixel->color = gamePtr[i];
 				drawPixel(pixel);
 			}
 		}
@@ -142,7 +144,7 @@ void drawFrog(Pixel *pixel, int xStartingPoint, int maxScreenX, int frogLane, in
 	int xCordCleanEnd;
 	int yCordCleanStart;
 	int yCordCleanEnd;
-	for (y = laneSize*frogLane; y < laneSize + (laneSize*frogLane); y++)
+	for (y = (laneSize*frogLane); y < laneSize + (laneSize*frogLane); y++)
 	{
 		for ( x = xStartingPoint; x < (objSize + xStartingPoint); x++) 
 		{	
@@ -205,20 +207,23 @@ void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int di
 	int yCordCleanStart;
 	int yCordCleanEnd;
 	int startPoint = *carStart;
+	int yStart = 152 + (laneSize*objectLane);
+	int yEnd = 152 + (laneSize + (laneSize*objectLane));
 	
-	for (y = laneSize*objectLane; y < laneSize + (laneSize*objectLane); y++)
+	for (y = yStart; y < yEnd; y++)
 	{
 		for (x = startPoint; x < (objSize + startPoint); x++) 
 		{	
-			if (y < objSize + (laneSize * objectLane)){
+			if (y < 152 + (objSize + (laneSize * objectLane))){
 				//~ printf("%d", x);
 				i++;
-				if (x >= 231 && x<= 563 ) {
+				if (x >= 241 && x<= 561 ) {
 					pixel->color = carPtr[i];
 					pixel->x = x;
 					pixel->y = y;
 					if(x >= 0 && x <= maxScreenX){
 						drawPixel(pixel);
+						
 					}
 				}
 			}
@@ -299,7 +304,7 @@ int main(){
 			if (cars[1] >= 561){
 				cars[1] = 205;
 			}
-			//~ delayMicroseconds(60000);
+			delayMicroseconds(60000);
 			frogDirection = getDirectionFromCon(&frogLane, &frogStartPoint, gpioPtr);
 
 			
