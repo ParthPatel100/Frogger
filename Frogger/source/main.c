@@ -12,8 +12,6 @@
 #include "blueCar1.h"
 #include "redCar1.h"
 #include "GameScreen.h"
-#include "mainScreenOne.h"
-
 
 #define UP 4
 #define RIGHT 7
@@ -89,7 +87,7 @@ int getDirectionFromCon(int* frogLane, int* frogStart, unsigned int *gpioPtr){
 	
 	int size =33;
 		if (buttonCode == 5){
-			if(*frogLane < 21){
+			if(*frogLane < 17){
 				*frogLane += 1;
 			}
 		}
@@ -166,28 +164,28 @@ void drawFrog(Pixel *pixel, int xStartingPoint, int maxScreenX, int frogLane, in
 		if (direction == RIGHT){
 			xCordCleanStart = xStartingPoint - objSize;
 			xCordCleanEnd = xStartingPoint-1;
-			yCordCleanStart = laneSize*frogLane;
-			yCordCleanEnd = y - 3;
+			yCordCleanStart = 152 + laneSize*frogLane;
+			yCordCleanEnd = yCordCleanStart + objSize;
 		}
 		else if (direction == LEFT){
 			xCordCleanStart = x;
 			xCordCleanEnd = xCordCleanStart + objSize;
-			yCordCleanStart = objSize*frogLane;
-			yCordCleanEnd = y - 3;
+			yCordCleanStart = 152 + laneSize*frogLane;
+			yCordCleanEnd = yCordCleanStart + objSize;
 		}
-		else if(direction == UP){
+		if(direction == UP){
 			xCordCleanStart = xStartingPoint;
 			xCordCleanEnd = x - 1;
-			yCordCleanStart = laneSize + laneSize*frogLane;
+			yCordCleanStart = laneSize + laneSize*frogLane + 152;
 			yCordCleanEnd = objSize + yCordCleanStart;	
 		}
 		else if(direction == DOWN){
 			xCordCleanStart = xStartingPoint;
 			xCordCleanEnd = x - 1;
-			yCordCleanStart = (laneSize*frogLane) - laneSize;
-			yCordCleanEnd = objSize + yCordCleanStart;
+			yCordCleanStart = (laneSize*frogLane) - laneSize + 152;
+			yCordCleanEnd = objSize + yCordCleanStart ;
 		}
-		cleanBackground(pixel, xCordCleanStart, yCordCleanStart + 152, xCordCleanEnd, yCordCleanEnd + 152);
+		cleanBackground(pixel, xCordCleanStart, yCordCleanStart, xCordCleanEnd, yCordCleanEnd);
 	}
 }
 void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int direction){
@@ -315,7 +313,7 @@ int main(){
 				collided = checkCollision(pixel, frogStartPoint, cars[i], frogLane, carLanes[i]);
 				if(collided){
 					//clean the dead frog from screen adn reset frog position
-					cleanBackground(pixel, frogStartPoint,  152+(35*frogLane), frogStartPoint + 33 ,  152+(35*frogLane + 33));
+					cleanBackground(pixel, frogStartPoint,  152 + 35*frogLane, frogStartPoint + 33 ,  152 + 35*frogLane + 33);
 					frogStartPoint = 400;
 					frogLane = 17;
 					}
