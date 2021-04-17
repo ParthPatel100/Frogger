@@ -144,11 +144,11 @@ void drawFrog(Pixel *pixel, int xStartingPoint, int maxScreenX, int frogLane, in
 	int xCordCleanEnd;
 	int yCordCleanStart;
 	int yCordCleanEnd;
-	for (y = (laneSize*frogLane); y < laneSize + (laneSize*frogLane); y++)
+	for (y = 152 + (laneSize*frogLane); y < 152 + laneSize + (laneSize*frogLane); y++)
 	{
 		for ( x = xStartingPoint; x < (objSize + xStartingPoint); x++) 
 		{	
-			if (y < objSize + laneSize*frogLane){
+			if (y < 152 + objSize + laneSize*frogLane){
 				i++;
 				if (x>=0 && x< maxScreenX) {
 					pixel->color = frogPtr[i];
@@ -276,7 +276,7 @@ int main(){
 	
 	int maxScreenX = 800;
 	int maxScreenY = 800;
-	int frogLane = 9;
+	int frogLane = 17;
 	int carLane = 5;
 
 	int frogPosition = 0;
@@ -288,7 +288,7 @@ int main(){
 	int testPoint = 800;
 	int currentCode = -2;	 
 	int cars[] = {561, 198, 0};
-	int carLanes[] = {4,5,6};
+	int carLanes[] = {3,5,6};
 	int carPos;
 	drawMainMenu(pixel);
 	drawGameScreen(pixel);
