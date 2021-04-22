@@ -19,7 +19,7 @@ COBJECTS := $(patsubst $(SOURCE)%.c,$(BUILD)%.o,$(wildcard $(SOURCE)*.c))
 
 # Rule to make the executable files.
 myProg: $(OBJECTS) $(COBJECTS)
-	gcc -lwiringPi -o myProg $(OBJECTS) $(COBJECTS)
+	gcc -lwiringPi -o myProg $(OBJECTS) $(COBJECTS) -pthread
 
 # Rule to make the object files.
 $(BUILD)%.o: $(SOURCE)%.s
