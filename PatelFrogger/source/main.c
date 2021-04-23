@@ -55,12 +55,16 @@
 #define LEFT 6
 #define PAUSE 3
 
+//Reference point for the lanes, where the top most lane is lane0 and the starting frog lane is lane17
+#define REF_POINT 152
+
 /* Definitions */
 typedef struct {
 	short int color;
 	int x, y;
 } Pixel;
 
+//Game structure to store current info of the game
 struct Game{
 	short int screen[800*800*2];
 	short int pausescreen[400*300*2];
@@ -71,8 +75,10 @@ struct Game{
 
 struct fbs framebufferstruct;
 void drawPixel(Pixel *pixel);
+void restartGame(Pixel *pixel);
+void goToMainMenu(Pixel *pixel);
 
-
+//frog structure to store current info of the frog
 struct shared{
 	int position;
 	int lane;
@@ -88,6 +94,7 @@ struct shared{
 	int speed;
 };
 
+//image struct to store current info of the heart value pack
 struct image 
 {
 	int lane;
@@ -223,7 +230,7 @@ void cleanBackground(Pixel *pixel, int xStart, int yStart, int xEnd, int yEnd){
 //				into an object. Frog will also lose life.
 void resetFrog(Pixel *pixel){
 	//clean the dead frog from screen adn reset frog position
-	cleanBackground(pixel, frog.position,  152 + 35*frog.lane, frog.position + 33 ,  152 + 35*frog.lane + 33);
+	cleanBackground(pixel, frog.position,  REF_POINT + 35*frog.lane, frog.position + 33 ,  REF_POINT + 35*frog.lane + 33);
 	frog.position = 400;
 	frog.lane = 17;
 	frog.direction = -1;
@@ -275,70 +282,82 @@ int getDirectionFromCon(unsigned int *gpioPtr){
 
 }
 
-
-void drawFrog(Pixel *pixel, int maxScreenX){
+//parameters: pixel
+//returns: void
+//description: update the gameScreen array with the prog array based on the lane and position and clean the background
+void drawFrog(Pixel *pixel){
 	short int *frogPtr=(short int *) froggie.pixel_data;
 	int i =0;
 	int x, y;
 	int laneSize = 35;
 	int objSize = 33;
+	
+	//the x, y co-ordinates for the clean background
 	int xCordCleanStart;
 	int xCordCleanEnd;
 	int yCordCleanStart;
 	int yCordCleanEnd;
+	
+	//variables for the frog postion, direction and lane
 	int xStartingPoint = frog.position; 
 	int direction = frog.direction;
 	int frogLane = frog.lane;
-	for (y = 152 + (laneSize*frogLane); y < 152 + laneSize + (laneSize*frogLane); y++)
+	
+	//reference point is 152 
+	for (y = REF_POINT + (laneSize*frogLane); y < REF_POINT + laneSize + (laneSize*frogLane); y++)
 	{
 		for ( x = xStartingPoint; x < (objSize + xStartingPoint); x++) 
 		{	
-			if (y < 152 + objSize + laneSize*frogLane){
-				i++;
-				if (x>=0 && x< maxScreenX) {
-					if(frogPtr[i] >= -5000){
-						game.screen[800*y + x] = frogPtr[i];
-					}
-					//draws the frog inside the screen and ignores the backgrounds of the frog image
+			
+			if (y < REF_POINT + objSize + laneSize*frogLane){
+				//draws the frog inside the screen and ignores the backgrounds of the frog image
+				if(frogPtr[i] >= -5000){
+					game.screen[800*y + x] = frogPtr[i];
 				}
+				i++;
 			}
 		}
 	}
+	
+	//set the x,y co-ordinated and clean the background based on the direction
 	if (direction >= 0){
 		if (direction == RIGHT){
 			xCordCleanStart = xStartingPoint - objSize;
 			xCordCleanEnd = xStartingPoint-1;
-			yCordCleanStart = 152 + laneSize*frogLane;
+			yCordCleanStart = REF_POINT + laneSize*frogLane;
 			yCordCleanEnd = yCordCleanStart + objSize;
 		}
 		else if (direction == LEFT){
 			xCordCleanStart = x;
 			xCordCleanEnd = xCordCleanStart + objSize;
-			yCordCleanStart = 152 + laneSize*frogLane;
+			yCordCleanStart = REF_POINT + laneSize*frogLane;
 			yCordCleanEnd = yCordCleanStart + objSize;
 		}
 		if(direction == UP){
 			xCordCleanStart = xStartingPoint;
 			xCordCleanEnd = x - 1;
-			yCordCleanStart = laneSize + laneSize*frogLane + 152;
+			yCordCleanStart = laneSize + laneSize*frogLane + REF_POINT;
 			yCordCleanEnd = objSize + yCordCleanStart;	
 		}
 		else if(direction == DOWN){
 			xCordCleanStart = xStartingPoint;
 			xCordCleanEnd = x - 1;
-			yCordCleanStart = (laneSize*frogLane) - laneSize + 152;
+			yCordCleanStart = (laneSize*frogLane) - laneSize + REF_POINT;
 			yCordCleanEnd = objSize + yCordCleanStart ;
 		}
 		cleanBackground(pixel, xCordCleanStart, yCordCleanStart, xCordCleanEnd, yCordCleanEnd);
 	}
 }
 
-
-void drawObj(Pixel *pixel, int* objStart, int maxScreenX, int objectLane, int direction){
+//parameters: pixel, objStart, objectLane, direction
+//returns: void
+//decription: draw the object, car, snake, log, tumbleweed based on lane number
+void drawObj(Pixel *pixel, int* objStart, int objectLane, int direction){
 	short int *objectPtr = 0;
-	
 	int length = 33;
 	int width = 33;
+	
+	//draw the object based on lane
 	if(objectLane >= 14 && objectLane <= 16){
 		if (objectLane == 14){
 			objectPtr= (short int *) truck.pixel_data;
@@ -371,24 +390,24 @@ void drawObj(Pixel *pixel, int* objStart, int maxScreenX, int objectLane, int di
 	
 	else if (objectLane >= 10 && objectLane <=12){
 		if (direction == RIGHT){
-			objectPtr = snake2.pixel_data;
+			objectPtr =(short int *) snake2.pixel_data;
 			length = 50;
 		}
 		else if(direction == LEFT){
-			objectPtr = snake.pixel_data;
+			objectPtr =(short int *) snake.pixel_data;
 			length = 50;
 		}
 	
 	}
 	else if (objectLane >= 6 && objectLane <=8){
-		objectPtr = tumbleWeed.pixel_data;
+		objectPtr =(short int *) tumbleWeed.pixel_data;
 		length = 33;
 		
 
 	
 	}
 	
-	
+	//store the object array in the game array
 	int i =0;
 	int x, y;
 	int laneSize = 35;
@@ -397,15 +416,15 @@ void drawObj(Pixel *pixel, int* objStart, int maxScreenX, int objectLane, int di
 	int yCordCleanStart;
 	int yCordCleanEnd;
 	int startPoint = *objStart;
-	int yStart = 152 + (laneSize*objectLane);
-	int yEnd = 152 + (laneSize + (laneSize*objectLane));
+	int yStart = REF_POINT + (laneSize*objectLane);
+	int yEnd = REF_POINT + (laneSize + (laneSize*objectLane));
 	
 	for (y = yStart; y < yEnd; y++)
 	{
 		for (x = startPoint; x < (length + startPoint); x++) 
 		{	
 			
-			if (y <  152 + (width + (laneSize * objectLane))){
+			if (y <  REF_POINT + (width + (laneSize * objectLane))){
 		
 				if (x > 241 && x<= 561 ) {
 					
@@ -417,19 +436,20 @@ void drawObj(Pixel *pixel, int* objStart, int maxScreenX, int objectLane, int di
 		}
 	}
 
+	//based on direciton, set its speed to their repective directions, and if the frog in on the log, set the frog speed to the log speed 
 	if (direction == RIGHT){
-		int speed = 2; //can be randomized
+		int speed = 2; 
 		*objStart +=speed;
 		if(frog.lane == objectLane){
 			frog.speed = speed;
 		}
 		xCordCleanStart = startPoint - speed;
 		xCordCleanEnd = startPoint - 1;
-		yCordCleanStart = laneSize*objectLane  + 152;
+		yCordCleanStart = laneSize*objectLane  + REF_POINT;
 		yCordCleanEnd = yCordCleanStart + width;
 	}
 	else if (direction == LEFT){
-		int speed = 1 ; //can be randomized
+		int speed = 1 ; 
 		*objStart -= speed;
 		if(frog.lane == objectLane){
 			frog.speed = speed;
@@ -437,12 +457,16 @@ void drawObj(Pixel *pixel, int* objStart, int maxScreenX, int objectLane, int di
 		xCordCleanStart = x;
 		xCordCleanEnd = x + speed - 1;
 		
-		yCordCleanStart = laneSize*objectLane + 152;
+		yCordCleanStart = laneSize*objectLane + REF_POINT;
 		yCordCleanEnd = yCordCleanStart + width;
 	}
 	cleanBackground(pixel, xCordCleanStart, yCordCleanStart , xCordCleanEnd, yCordCleanEnd );
 	
 }
+
+//parameters: pixel, objectPosition, objectLane
+//returns: boolean
+//description: if the frog collides with an object, return true else return false
 bool checkCollision(Pixel *pixel, int objectPosition, int objectLane){
 	int objectSize; 
 	
@@ -460,7 +484,8 @@ bool checkCollision(Pixel *pixel, int objectPosition, int objectLane){
 		objectSize = 33;
 	}
 	
-	
+	//check the difference between the locations 
+	//if the frog touches the object by even 1 pixel, collision has occured
 	if (frog.lane == objectLane){
 		int locationDifference = frog.position - objectPosition;
 		if (locationDifference < objectSize && locationDifference > -33){
@@ -469,6 +494,10 @@ bool checkCollision(Pixel *pixel, int objectPosition, int objectLane){
 	}
 	return false;
 }
+
+//parameters: pixel, objectPosition, objectLane, direction
+//returns: boolean
+//description: check if the frog is on log, in which case the frog position is updated by the speed
 bool checkOnLog(Pixel *pixel, int objectPosition, int objectLane, int direction){
 	int objectSize = 75;
 	
@@ -502,15 +531,20 @@ bool checkOnLog(Pixel *pixel, int objectPosition, int objectLane, int direction)
 		
 }
 
+//generate random integer for the object start point
 int generateRandInt(){
 	return rand() % 300 + 241;	
 	
 }
 
+//generate a 2nd random integer for the 2nd object start point
 int generateRandInt2(){
 	return 160 + rand() % 40;	
 }
 
+//parameters: objectStartPointArray, identifier
+//returns: void
+//decription: generate random start points for the objects 
 void generateRandomStartPos(int objStartPointArray[6], int identifier){
 	if (identifier % 1 == 0){
 		objStartPointArray[0] = generateRandInt();
@@ -566,7 +600,7 @@ void drawHeart (Pixel *pixel)
 	xStart = (rand() % (522 + 1 - 245)) + 245; //get random x postion 
 	
 	//depending on the lane, initialize the y coordinate.
-	yStart = 152 + (35*randomLane);
+	yStart = REF_POINT + (35*randomLane);
 	
 	heartPack.lane = randomLane;
 	heartPack.startX = xStart;
@@ -805,7 +839,7 @@ bool isGameWon(Pixel *pixel)
 		{
 			if (castleXStart[i] <= frog.position && castleXEnd[i] >= frog.position + 33)
 			{
-				drawFrog(pixel, 800);
+				drawFrog(pixel);
 				
 				return true;
 			}
@@ -1223,6 +1257,7 @@ void pauseScreen(Pixel *pixel, unsigned int *gpioPtr)
 	
 }
 
+//Frog thread for the frog, to get button pressed from the controller
 void *FrogThread(){
 	unsigned int *gpioPtr = getGPIOPtr(); 
 	while(1)
@@ -1238,13 +1273,13 @@ void *FrogThread(){
 
 }
 
+//Image thread for the image rendering and draw the final output
 void *ImageThread(){
 	while(1){
 		while(game.finished);
 		unsigned int *gpioPtr = getGPIOPtr();  
 		Pixel *pixel;
 		pixel = malloc(sizeof(Pixel));
-		int maxScreenX = 800;
 		bool collided = false;
 		//~ int valuePackDrawn = 0;
 		//~ bool gotHeart = false;
@@ -1287,7 +1322,7 @@ void *ImageThread(){
 				else if(carLane[i] == 14 && car[i] >= 563 ){
 					car[i] = 166;
 				}
-				drawObj(pixel, &car[i], maxScreenX, carLane[i], carDir[i]);
+				drawObj(pixel, &car[i],  carLane[i], carDir[i]);
 				
 				if(logLane[i] == 2 && log[i] <= 180){
 					log[i] = 562;
@@ -1298,7 +1333,7 @@ void *ImageThread(){
 				else if(logLane[i] == 4 && log[i] <= 165){
 					log[i] = 562;
 				}
-				drawObj(pixel, &log[i], maxScreenX, logLane[i], logDir[i]);
+				drawObj(pixel, &log[i],  logLane[i], logDir[i]);
 				
 				if(snakeLane[i] == 10 && snake[i] <= 191){
 					snake[i] = 591;
@@ -1309,7 +1344,7 @@ void *ImageThread(){
 				else if(snakeLane[i] == 12 && snake[i] <=191){
 					snake[i] = 591;
 				}
-				drawObj(pixel, &snake[i], maxScreenX, snakeLane[i], snakeDir[i]);
+				drawObj(pixel, &snake[i], snakeLane[i], snakeDir[i]);
 				
 				if(tweedLane[i] == 8 && tweed[i] >= 563){
 					tweed[i] = 208;
@@ -1320,13 +1355,13 @@ void *ImageThread(){
 				else if(tweedLane[i] == 6 && tweed[i] >= 563 ){
 					tweed[i] = 208;
 				}
-				drawObj(pixel, &tweed[i], maxScreenX, tweedLane[i], tweedDir[i]);
+				drawObj(pixel, &tweed[i], tweedLane[i], tweedDir[i]);
 			
 			}
 		
 			
 			
-			drawFrog(pixel, maxScreenX);	
+			drawFrog(pixel);	
 			for (int i = 0; i < 6; i++){
 				collided = checkCollision(pixel, car[i], carLane[i]);
 				if(collided){
@@ -1379,7 +1414,7 @@ void *ImageThread(){
 				heartPack.gotHeart = isHeartObtained();
 				if (heartPack.gotHeart)
 				{
-					cleanBackground(pixel, heartPack.startX,  152 + 35*heartPack.lane, heartPack.startX + 33 ,  152 + 35*heartPack.lane + 33);
+					cleanBackground(pixel, heartPack.startX,  REF_POINT + 35*heartPack.lane, heartPack.startX + 33 ,  REF_POINT + 35*heartPack.lane + 33);
 					frog.lives ++;
 					heartPack.heartCount = 1;
 				}
@@ -1413,7 +1448,6 @@ int main(){
 	Pixel *pixel;
 	pixel = malloc(sizeof(Pixel));
 	
-	unsigned int *gpioPtr = getGPIOPtr();  
 	
 	goToMainMenu(pixel);
 
@@ -1434,14 +1468,22 @@ int main(){
 	frog.moves = 200;
 	frog.time = 150;
 	frog.maxLane = 17;
-	//create car thread
-	int rc;
+	//create Image and frog threads
 	pthread_t imageRenderThread;
 	pthread_t frogThread;
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
-	rc = pthread_create(&imageRenderThread, &attr, ImageThread, NULL);
-	rc = pthread_create(&frogThread, &attr, FrogThread, NULL);
+	int rc = pthread_create(&imageRenderThread, &attr, ImageThread, NULL);
+	if(rc){
+		exit(-1);
+	}
+	int rc2 = pthread_create(&frogThread, &attr, FrogThread, NULL);
+	if(rc2)
+	{
+		exit(-1);
+	}
+	
+	//if game is finished, restart the game
 	while(1){ 
 		if (game.finished)
 		{	
