@@ -24,4 +24,4 @@ To compile the project part 1 code:
     -frog touching the heart means a life gets given to the player
    -if game is lost or won, press any button on the controller to return to the main menu screen
   
-NOTE: The SNES Controller is highly sensitive
+NOTE: The SNES Controller is highly sensitive. At times pressing the button once may read the button is pressed twice.
