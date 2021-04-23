@@ -7,6 +7,7 @@
 #include "SNES.h"
 #include <pthread.h>
 #include <time.h>
+#include <string.h>
 
 //All the Images
 #include "froggie.h"
@@ -15,6 +16,12 @@
 #include "redCar1.h"
 #include "GameScreen.h"
 #include "truck.h"
+#include "tumbleWeed.h"
+#include "logBig.h"
+#include "log.h"
+#include "logBig2.h"
+#include "snake.h"
+#include "snake2.h"
 #include "zero.h"
 #include "one.h"
 #include "two.h"
@@ -28,11 +35,13 @@
 #include "heart.h"
 #include "gameWin.h"
 #include "gameLost.h"
+#include "gameMenu.h"
 
 #define UP 4
 #define RIGHT 7
 #define DOWN 5
 #define LEFT 6
+#define PAUSE 3
 
 /* Definitions */
 typedef struct {
@@ -40,8 +49,16 @@ typedef struct {
 	int x, y;
 } Pixel;
 
+struct Game{
+	short int screen[800*800*2];
+	short int pausescreen[400*300*2];
+	bool pause;
+	time_t pauseDuration;
+}game;
+
 struct fbs framebufferstruct;
 void drawPixel(Pixel *pixel);
+
 
 struct shared{
 	int position;
@@ -53,6 +70,9 @@ struct shared{
 	time_t startTime;
 	time_t endTime;
 	int score;
+	int direction;
+	int onLog;
+	int speed;
 };
 
 struct image 
@@ -71,17 +91,32 @@ void drawPixel(Pixel *pixel){
                        (pixel->y+framebufferstruct.yOff) * framebufferstruct.lineLength;
 	*((unsigned short int*)(framebufferstruct.fptr + location)) = pixel->color;
 }
-
-void drawBackground(Pixel *pixel, int maxScreenX, int maxScreenY){
-	for (int y = 0; y < maxScreenY; y++)
+void drawGameScreen( Pixel *pixel){
+	for (int y = 0; y < 800; y++)
 	{
-		for (int x = 0; x < maxScreenX; x++) 
+		for (int x = 0; x < 800; x++) 
 		{	 
-			pixel->color = 0xF;
-			pixel->x = x;
-			pixel->y = y;
+			pixel -> x = x;
+			pixel -> y = y;
+			pixel -> color = game.screen[800 * y + x];
+			
 			drawPixel(pixel);
 		}
+	}
+	
+}
+
+void drawGameBoard(Pixel *pixel){
+	short int *gamePtr = (short int *) game1.pixel_data;
+	int i = 0;
+	for (int y = 0; y < 800; y++)
+	{
+		for (int x = 0; x < 800; x++) 
+		{	 
+			game.screen[i] = gamePtr[i];
+			i++;
+		}
+		
 	}
 }
 
@@ -92,62 +127,102 @@ void drawMainMenu(Pixel *pixel){
 	{
 		for (int x = 0; x < 800; x++) 
 		{	 
-			pixel->color = menuPtr[i];
+			game.screen[i] = menuPtr[i];
 			i++;
-			pixel->x = x;
-			pixel->y = y;
+			
+			//~ drawPixel(pixel);
+		}
+	}
+}
+void drawGameMenuScreen( Pixel *pixel){
+	int i = 0;
+	for (int y = 245; y < 545; y++)
+	{
+		for (int x = 202; x < 602; x++) 
+		{	 
+			pixel -> x = x;
+			pixel -> y = y;
+			pixel -> color = game.pausescreen[i];
+			i++;
 			drawPixel(pixel);
+		}
+	}
+	
+}
+
+void drawGameMenu(Pixel *pixel){
+	short int *gamePausePtr = (short int *) gameMenu.pixel_data;
+	int i = 0;
+	for (int y = 245; y < 545; y++)
+	{
+		for (int x = 202; x < 602; x++) 
+		{	 
+			game.pausescreen[i] = gamePausePtr[i];
+			i++;
+			
+			//~ drawPixel(pixel);
 		}
 	}
 }
 
-
-
-void drawGameScreen(Pixel *pixel){
+void cleanBackground(Pixel *pixel, int xStart, int yStart, int xEnd, int yEnd){
 	short int *gamePtr = (short int *) game1.pixel_data;
 	int i = 0;
-	for (int y = 0; y < 800; y++)
-	{
-		for (int x = 0; x < 800; x++) 
-		{	 
-			pixel->color = gamePtr[i];
-			i++;
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
+
+	for(int x = xStart; x <= xEnd; x++){
+		for(int y = yStart; y <= yEnd; y++){
+			if(x >= 0 && x< 800 && y < 800 && y >= 0){
+				i = (800 * y + x);
+				game.screen[i] = gamePtr[i];
+				drawPixel(pixel);
+			}
 		}
-		
 	}
+}
+
+void initialGame(Pixel *pixel)
+{
+	
+	
+}
+
+
+void resetFrog(Pixel *pixel){
+	//clean the dead frog from screen adn reset frog position
+	cleanBackground(pixel, frog.position,  152 + 35*frog.lane, frog.position + 33 ,  152 + 35*frog.lane + 33);
+	frog.position = 400;
+	frog.lane = 17;
+	frog.direction = -1;
+	frog.lives -= 1;
+
 }
 int getDirectionFromCon(int* frogLane, int* frogStart, unsigned int *gpioPtr){
 	int buttonCode = getButtonPressed(gpioPtr);
 	
 	int size =33;
 		if (buttonCode == 5){
-			if(*frogLane < 17){
-				*frogLane += 1;
+			if(frog.lane < 17){
+				frog.lane += 1;
 				frog.moves -= 1;
 			}
 		}
 		
 		else if (buttonCode == 4){
-			if(*frogLane > 0){
-				*frogLane -= 1;
+			if(frog.lane > 0){
+				frog.lane-= 1;
 				frog.moves -= 1;
 			}
 		}
 		else if (buttonCode == 6){
-			if(*frogStart >= 264){
-				*frogStart -= 33;
+			if(frog.position >= 264){
+				frog.position -= 33;
 				frog.moves -= 1;
-
 			}
 		}
 		else if (buttonCode == 7){
-			if(*frogStart <= 520){
-				*frogStart += 33;
+			if(frog.position <= 528){
+				frog.position += 33;
 				frog.moves -= 1;
-
 			}
 		}
 		
@@ -160,23 +235,6 @@ int getDirectionFromCon(int* frogLane, int* frogStart, unsigned int *gpioPtr){
 	//~ printf("lane 2 %d\n", *frogLane);
 	return buttonCode;
 
-}
-
-void cleanBackground(Pixel *pixel, int xStart, int yStart, int xEnd, int yEnd){
-	short int *gamePtr = (short int *) game1.pixel_data;
-	int i = 0;
-
-	for(int x = xStart; x <= xEnd; x++){
-		for(int y = yStart; y <= yEnd; y++){
-			if(x >= 0 && x< 800 && y < 800 && y >= 0){
-				i = (800 * y + x);
-				pixel->x = x;
-				pixel->y = y;
-				pixel->color = gamePtr[i];
-				drawPixel(pixel);
-			}
-		}
-	}
 }
 
 
@@ -197,13 +255,10 @@ void drawFrog(Pixel *pixel, int xStartingPoint, int maxScreenX, int frogLane, in
 			if (y < 152 + objSize + laneSize*frogLane){
 				i++;
 				if (x>=0 && x< maxScreenX) {
-					pixel->color = frogPtr[i];
-					pixel->x = x;
-					pixel->y = y;
-					//draws the frog inside the screen and ignores the backgrounds of the frog image
-					if(x <= maxScreenX && frogPtr[i] >= -5000){
-						drawPixel(pixel);
+					if(frogPtr[i] >= -5000){
+						game.screen[800*y + x] = frogPtr[i];
 					}
+					//draws the frog inside the screen and ignores the backgrounds of the frog image
 				}
 			}
 		}
@@ -236,23 +291,65 @@ void drawFrog(Pixel *pixel, int xStartingPoint, int maxScreenX, int frogLane, in
 		cleanBackground(pixel, xCordCleanStart, yCordCleanStart, xCordCleanEnd, yCordCleanEnd);
 	}
 }
-void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int direction){
-	short int *carPtr = 0;
-	
-	
+
+
+
+
+void drawObj(Pixel *pixel, int* objStart, int maxScreenX, int objectLane, int direction){
+	short int *objectPtr = 0;
+	int j = 0;
 	int length = 33;
 	int width = 33;
-	if (objectLane == 14){
-		carPtr = (short int *) truck.pixel_data;
-		length = 70;
-	}
+	if(objectLane >= 14 && objectLane <= 16){
+		if (objectLane == 14){
+			objectPtr= (short int *) truck.pixel_data;
+			length = 70;
+		}
 
-	else if (direction == RIGHT){
-		carPtr=(short int *) redCar.pixel_data;
+		else if (direction == RIGHT){
+			objectPtr=(short int *) redCar.pixel_data;
+			
+		}
+		else{
+			objectPtr=(short int *) blueCar.pixel_data;
+		}
 	}
-	else{
-		carPtr=(short int *) blueCar.pixel_data;
+	else if (objectLane >= 2 && objectLane <= 4){
+		if (objectLane == 4){
+			objectPtr= (short int *) logBig.pixel_data;
+			length = 75;
+		}
+
+		else if (direction == RIGHT){
+			objectPtr=(short int *) logBig2.pixel_data;
+			length = 75;
+		}
+		else{
+			objectPtr=(short int *) log.pixel_data;
+			length = 50;
+		}	
 	}
+	
+	else if (objectLane >= 10 && objectLane <=12){
+		if (direction == RIGHT){
+			objectPtr = snake2.pixel_data;
+			length = 50;
+		}
+		else if(direction == LEFT){
+			objectPtr = snake.pixel_data;
+			length = 50;
+		}
+	
+	}
+	else if (objectLane >= 6 && objectLane <=8){
+		objectPtr = tumbleWeed.pixel_data;
+		length = 33;
+		
+
+	
+	}
+	
+	
 	int i =0;
 	int x, y;
 	int laneSize = 35;
@@ -260,7 +357,7 @@ void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int di
 	int xCordCleanEnd;
 	int yCordCleanStart;
 	int yCordCleanEnd;
-	int startPoint = *carStart;
+	int startPoint = *objStart;
 	int yStart = 152 + (laneSize*objectLane);
 	int yEnd = 152 + (laneSize + (laneSize*objectLane));
 	
@@ -268,43 +365,47 @@ void drawCar(Pixel *pixel, int* carStart, int maxScreenX, int objectLane, int di
 	{
 		for (x = startPoint; x < (length + startPoint); x++) 
 		{	
+			
 			if (y <  152 + (width + (laneSize * objectLane))){
 				//~ printf("%d", x);
-				i++;
+		
 				if (x > 241 && x<= 561 ) {
-					pixel->color = carPtr[i];
-					pixel->x = x;
-					pixel->y = y;
-					drawPixel(pixel);
+					
+					game.screen[800 * y + x] = objectPtr[i];
 				
 				}
+				i++;
 			}
 		}
 	}
-
+	srand(time(NULL));
 
 	if (direction == RIGHT){
-		xCordCleanStart = startPoint - 1;
+		int speed = 2; //can be randomized
+		*objStart +=speed;
+		if(frog.lane == objectLane){
+			frog.speed = speed;
+		}
+		xCordCleanStart = startPoint - speed;
 		xCordCleanEnd = startPoint - 1;
-		yCordCleanStart = laneSize*objectLane;
+		yCordCleanStart = laneSize*objectLane  + 152;
 		yCordCleanEnd = yCordCleanStart + width;
-		*carStart +=1;
 	}
 	else if (direction == LEFT){
+		int speed = 1 ; //can be randomized
+		*objStart -= speed;
+		if(frog.lane == objectLane){
+			frog.speed = speed;
+		}
 		xCordCleanStart = x;
-		xCordCleanEnd = x ;
-		yCordCleanStart = laneSize*objectLane;
+		xCordCleanEnd = x + speed - 1;
+		
+		yCordCleanStart = laneSize*objectLane + 152;
 		yCordCleanEnd = yCordCleanStart + width;
-		*carStart -=1;
 	}
-	cleanBackground(pixel, xCordCleanStart, yCordCleanStart + 152, xCordCleanEnd, yCordCleanEnd + 152);
+	cleanBackground(pixel, xCordCleanStart, yCordCleanStart , xCordCleanEnd, yCordCleanEnd );
 	
 }
-
-
-
-
-
 bool checkCollision(Pixel *pixel, int frogPosition, int objectPosition, int frogLane, int objectLane){
 	int objectSize; 
 	
@@ -312,18 +413,87 @@ bool checkCollision(Pixel *pixel, int frogPosition, int objectPosition, int frog
 	{
 		objectSize = 70;
 	}
+	else if (objectLane >= 10 && objectLane <= 12)
+	{
+		objectSize = 50;
+	}
 	else
 	{
 		objectSize = 33;
 	}
 	
+		//~ else if (objectLane == 3 || objectLane == 4)
+	//~ {
+		//~ objectSize = 75;
+	//~ }
+	
 	if (frogLane == objectLane){
-		int locationDifference = frogPosition - objectPosition;
+		int locationDifference = frog.position - objectPosition;
 		if (locationDifference < objectSize && locationDifference > -33){
 			return true;
 		}
 	}
 	return false;
+}
+bool checkOnLog(Pixel *pixel, int objectPosition, int objectLane, int direction){
+	int objectSize = 75;
+	
+	if (objectLane == 2){
+		objectSize = 50;
+	}
+	if (frog.lane == objectLane){
+		int locationDifference = frog.position - objectPosition;
+		if(locationDifference >= 0 && locationDifference < objectSize - 33){
+			frog.onLog = true;
+			//if frog goes out of screen, return false
+			if(frog.position <= 241){
+				return false;
+			}
+			if(frog.position >= 528){
+				return false;
+			}
+			
+			//if log is moving to the right, make the frog move to the right otherwise to the left
+			if(direction == RIGHT){
+				frog.position += frog.speed;
+			}
+			else if (direction == LEFT){
+				frog.position -= frog.speed;
+			}
+			return true;
+		}
+		
+	}
+	return false;
+		
+}
+
+int generateRandInt(){
+	return rand() % 300 + 241;	
+	
+}
+
+int generateRandInt2(){
+	return 160 - rand() % 40;	
+}
+
+void generateRandomStartPos(int objStartPointArray[6], int identifier){
+	if (identifier % 1 == 0){
+		objStartPointArray[0] = generateRandInt();
+		objStartPointArray[1] = objStartPointArray[0] - generateRandInt2();
+		objStartPointArray[2] = generateRandInt();
+		objStartPointArray[3] = objStartPointArray[2] + generateRandInt2();
+		objStartPointArray[4] = generateRandInt();
+		objStartPointArray[5] =  objStartPointArray[4] - generateRandInt2();
+	}
+	else if (identifier % 1 == 1){
+		objStartPointArray[0] = generateRandInt();
+		objStartPointArray[1] = objStartPointArray[0] + generateRandInt2();
+		objStartPointArray[2] = generateRandInt();
+		objStartPointArray[3] = objStartPointArray[2] - generateRandInt2();
+		objStartPointArray[4] = generateRandInt();
+		objStartPointArray[5] =  objStartPointArray[4] + generateRandInt2();	
+	}
 }
 
 bool isHeartObtained ()
@@ -384,10 +554,11 @@ void drawHeart (Pixel *pixel)
 		for (int x = xStart; x < xEnd; x++) 
 		{	
 			
-			pixel->color = heartPtr[i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
+			//~ pixel->color = heartPtr[i];
+			//~ pixel->x = x;
+			//~ pixel->y = y;
+			//~ drawPixel(pixel);
+			game.screen[800 * y + x] = heartPtr[i];
 			i++;
 
 		}
@@ -444,8 +615,24 @@ short int * getNumPtr (int num)
 	return 0;
 	
 }
+void updateScreenInfo (Pixel *pixel, int xStart, int yStart, int xEnd, int yEnd, short int *ptr)
+{
+	int i = 0;
+	for (int y = yStart; y < yEnd; y++)
+	{
+		for (int x = xStart; x < xEnd; x++) 
+		{	
+			
+			//~ pixel->color = numPtr1[i];
+			//~ pixel->x = x;
+			//~ pixel->y = y;
+			//~ drawPixel(pixel);
+			game.screen[800 * y + x] = ptr[i];
+			i++;
 
-
+		}
+	}
+}
 void drawGameOverScore (Pixel *pixel)
 {
 	time_t remaining = 200 - frog.endTime;
@@ -468,101 +655,129 @@ void drawGameOverScore (Pixel *pixel)
 	int yEnd = yStart+33;
 	int xStart = 203 + 202;
 	int xEnd = xStart+33;
-	int i = 0;
-	for (int y = yStart; y < yEnd; y++)
-	{
-		for (int x = xStart; x < xEnd; x++) 
-		{	
-			
-			pixel->color = numPtr1[i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-			i++;
+	updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr1);
 
-		}
-	}
 	
 	//second Value
 	short int *numPtr2 = getNumPtr(second);
 	
 	xStart = 237 + 202;
 	xEnd = xStart+33;
-	i = 0;
-	for (int y = yStart; y < yEnd; y++)
-	{
-		for (int x = xStart; x < xEnd; x++) 
-		{	
-			
-			pixel->color = numPtr2[i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-			i++;
+	updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr2);
 
-		}
-	}
-	
 	//third Value
 	short int *numPtr3  = getNumPtr(third);
 	
 	xStart = 271+ 202;
 	xEnd = xStart+33;
-	i = 0;
-	for (int y = yStart; y < yEnd; y++)
-	{
-		for (int x = xStart; x < xEnd; x++) 
-		{	
-			
-			pixel->color = numPtr3[i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-			i++;
+	updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr3);
 
-		}
-	}
 	
 	//fourth Value
 	short int *numPtr4 = getNumPtr(fourth);
 	
 	xStart = 305+ 202;
 	xEnd = xStart+33;
-	i = 0;
-	for (int y = yStart; y < yEnd; y++)
-	{
-		for (int x = xStart; x < xEnd; x++) 
-		{	
-			
-			pixel->color = numPtr4 [i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-			i++;
+	updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr4);
 
+
+	drawGameScreen(pixel);
+
+	exit(-1);
+}
+
+void drawGameWon(Pixel *pixel)
+{
+	drawGameScreen(pixel);
+	short int *gameWonPtr = (short int *) gameWin.pixel_data;
+	int i = 0;
+	for (int y = 245; y < 545; y++)
+	{
+		for (int x = 202; x < 602; x++) 
+		{	 
+			//~ pixel->color = gameWonPtr[i];
+			i++;
+			//~ pixel->x = x;
+			//~ pixel->y = y;
+			//~ drawPixel(pixel);
+			game.screen[800 * y + x] = gameWonPtr[i];
 		}
+		
 	}
 	
-	exit(-1);
+	
+	drawGameOverScore(pixel);
+	
+}
+
+void drawGameLost(Pixel *pixel)
+{
+	drawGameScreen(pixel);
+	short int *gameLostPtr = (short int *) gameLost.pixel_data;
+	int i = 0;
+	for (int y = 245; y < 545; y++)
+	{
+		for (int x = 202; x < 602; x++) 
+		{	 
+			//~ pixel->color = gameLostPtr[i];
+			//~ i++;
+			//~ pixel->x = x;
+			//~ pixel->y = y;
+			//~ drawPixel(pixel);
+			game.screen[800 * y + x] = gameLostPtr[i];
+			i++;
+		}
+		
+	}
+	
+	
+	drawGameOverScore(pixel);
+	
+}
+
+bool isGameWon(Pixel *pixel)
+{
+	int castleXStart[] = {245, 311, 377, 433, 509};
+	int castleXEnd[] = {294, 360, 426, 492, 558};
+	if (frog.lane == 1)
+	{
+		for (int i = 0; i <= 4; i++)
+		{
+			if (castleXStart[i] <= frog.position && castleXEnd[i] >= frog.position + 33)
+			{
+				drawFrog(pixel, frog.position, 187, frog.position + 33, 187 + 33);
+				//~ if (i == 0)
+				//~ {
+					//~ drawFrog(pixel, 255, 800, frog.lane, -1);
+				//~ }
+				//~ else if (i == 1)
+				//~ {
+					//~ drawFrog(pixel, 321, 800, frog.lane, -1);
+				//~ }
+				//~ else if (i == 2)
+				//~ {
+					//~ drawFrog(pixel, 387, 800, frog.lane, -1);
+				//~ }
+				//~ else if (i == 3)
+				//~ {
+					//~ drawFrog(pixel, 453, 800, frog.lane, -1);
+				//~ }
+				//~ else if (i == 4)
+				//~ {
+					//~ drawFrog(pixel, 519, 800, frog.lane, -1);
+				//~ }
+				
+				return true;
+			}
+		}
+		drawGameLost(pixel);
+		
+	}
+	return false;
 }
 
 void updateScore (Pixel *pixel)
 {
-	//time_t remaining = 200 - frog.endTime;
-	//int score = (frog.lives + remaining + frog.moves ) * 5;
-	
-	
-	//~ int score = 170 - (frog.maxLane * 10);
-	
-	//~ int first = score / 1000;
-	
-	//~ int second = score / 100;
-	//~ second %= 10;
-	
-	//~ int third = score / 10;
-	//~ third %= 10;
-	
-	//~ int fourth = score % 10;
 	
 	frog.score = 170 - (frog.maxLane * 10);
 	
@@ -576,13 +791,6 @@ void updateScore (Pixel *pixel)
 	
 	int fourth = frog.score % 10;
 	
-	//printf("%d", score);
-	
-	//short int *numPtr = 0;
-
-	//getNumPtr(0, numPtr);
-	
-	//short int *numPtr=(short int *) zero.pixel_data;
 	
 	//first Value
 	short int *numPtr1 = getNumPtr(first);
@@ -591,126 +799,30 @@ void updateScore (Pixel *pixel)
 	int yEnd = 170+33;
 	int xStart = 615;
 	int xEnd = xStart+33;
-	int i = 0;
-	for (int y = yStart; y < yEnd; y++)
-	{
-		for (int x = xStart; x < xEnd; x++) 
-		{	
-			
-			pixel->color = numPtr1[i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-			i++;
-
-		}
-	}
+	updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr1);
 	
 	//second Value
 	short int *numPtr2 = getNumPtr(second);
 	
 	xStart = 649;
 	xEnd = xStart+33;
-	i = 0;
-	for (int y = yStart; y < yEnd; y++)
-	{
-		for (int x = xStart; x < xEnd; x++) 
-		{	
-			
-			pixel->color = numPtr2[i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-			i++;
-
-		}
-	}
+	updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr2);
 	
 	//third Value
 	short int *numPtr3  = getNumPtr(third);
 	
 	xStart = 683;
 	xEnd = xStart+33;
-	i = 0;
-	for (int y = yStart; y < yEnd; y++)
-	{
-		for (int x = xStart; x < xEnd; x++) 
-		{	
-			
-			pixel->color = numPtr3[i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-			i++;
-
-		}
-	}
+	updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr3);
 	
 	//fourth Value
 	short int *numPtr4 = getNumPtr(fourth);
 	
 	xStart = 717;
 	xEnd = xStart+33;
-	i = 0;
-	for (int y = yStart; y < yEnd; y++)
-	{
-		for (int x = xStart; x < xEnd; x++) 
-		{	
-			
-			pixel->color = numPtr4 [i];
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-			i++;
-
-		}
-	}
+	updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr4);
 	//cleanBackground(pixel, xStart, yStart, xEnd, yEnd);
 
-	
-}
-
-void drawGameWon(Pixel *pixel)
-{
-	short int *gameWonPtr = (short int *) gameWin.pixel_data;
-	int i = 0;
-	for (int y = 245; y < 545; y++)
-	{
-		for (int x = 202; x < 602; x++) 
-		{	 
-			pixel->color = gameWonPtr[i];
-			i++;
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-		}
-		
-	}
-	
-	
-	drawGameOverScore(pixel);
-	
-}
-
-void drawGameLost(Pixel *pixel)
-{
-	short int *gameLostPtr = (short int *) gameLost.pixel_data;
-	int i = 0;
-	for (int y = 245; y < 545; y++)
-	{
-		for (int x = 202; x < 602; x++) 
-		{	 
-			pixel->color = gameLostPtr[i];
-			i++;
-			pixel->x = x;
-			pixel->y = y;
-			drawPixel(pixel);
-		}
-		
-	}
-	
-	
-	drawGameOverScore(pixel);
 	
 }
 
@@ -728,20 +840,7 @@ void updateLives (Pixel *pixel)
 		int yEnd = 170+33;
 		int xStart = 103;
 		int xEnd = xStart+33;
-		int i = 0;
-		for (int y = yStart; y < yEnd; y++)
-		{
-			for (int x = xStart; x < xEnd; x++) 
-			{	
-				
-				pixel->color = numPtr1[i];
-				pixel->x = x;
-				pixel->y = y;
-				drawPixel(pixel);
-				i++;
-
-			}
-		}
+		updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr1);
 	}
 	
 	if (live == 0)
@@ -749,6 +848,7 @@ void updateLives (Pixel *pixel)
 		drawGameLost(pixel);
 	}
 	
+	//~ drawGameScreen(pixel);
 
 	
 }
@@ -773,20 +873,7 @@ void updateSteps (Pixel *pixel)
 		int yEnd = yStart+33;
 		int xStart = 35;
 		int xEnd = xStart+33;
-		int i = 0;
-		for (int y = yStart; y < yEnd; y++)
-		{
-			for (int x = xStart; x < xEnd; x++) 
-			{	
-				
-				pixel->color = numPtr1[i];
-				pixel->x = x;
-				pixel->y = y;
-				drawPixel(pixel);
-				i++;
-
-			}
-		}
+		updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr1);
 		
 		
 		//second Value
@@ -794,40 +881,14 @@ void updateSteps (Pixel *pixel)
 		
 		xStart = 69;
 		xEnd = xStart+33;
-		i = 0;
-		for (int y = yStart; y < yEnd; y++)
-		{
-			for (int x = xStart; x < xEnd; x++) 
-			{	
-				
-				pixel->color = numPtr2[i];
-				pixel->x = x;
-				pixel->y = y;
-				drawPixel(pixel);
-				i++;
-
-			}
-		}
+		updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr2);
 		
 		//third Value
 		short int *numPtr3 = getNumPtr(third);
 		
 		xStart = 103;
 		xEnd = xStart+33;
-		i = 0;
-		for (int y = yStart; y < yEnd; y++)
-		{
-			for (int x = xStart; x < xEnd; x++) 
-			{	
-				
-				pixel->color = numPtr3[i];
-				pixel->x = x;
-				pixel->y = y;
-				drawPixel(pixel);
-				i++;
-
-			}
-		}
+		updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr3);
 	}
 	
 	if (steps == 0)
@@ -841,7 +902,7 @@ void updateSteps (Pixel *pixel)
 
 void updateTime (Pixel *pixel)
 {
-	int secondRemaining = 200 - frog.endTime;
+	int secondRemaining = 150 - frog.endTime;
 	
 	if (secondRemaining >= 0)
 	{
@@ -858,20 +919,7 @@ void updateTime (Pixel *pixel)
 		int yEnd = yStart+33;
 		int xStart = 35;
 		int xEnd = xStart+33;
-		int i = 0;
-		for (int y = yStart; y < yEnd; y++)
-		{
-			for (int x = xStart; x < xEnd; x++) 
-			{	
-				
-				pixel->color = numPtr1[i];
-				pixel->x = x;
-				pixel->y = y;
-				drawPixel(pixel);
-				i++;
-
-			}
-		}
+		updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr1);
 		
 		
 		//second Value
@@ -879,40 +927,14 @@ void updateTime (Pixel *pixel)
 		
 		xStart = 69;
 		xEnd = xStart+33;
-		i = 0;
-		for (int y = yStart; y < yEnd; y++)
-		{
-			for (int x = xStart; x < xEnd; x++) 
-			{	
-				
-				pixel->color = numPtr2[i];
-				pixel->x = x;
-				pixel->y = y;
-				drawPixel(pixel);
-				i++;
-
-			}
-		}
+		updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr2);
 		
 		//third Value
 		short int *numPtr3 = getNumPtr(third);
 		
 		xStart = 103;
 		xEnd = xStart+33;
-		i = 0;
-		for (int y = yStart; y < yEnd; y++)
-		{
-			for (int x = xStart; x < xEnd; x++) 
-			{	
-				
-				pixel->color = numPtr3[i];
-				pixel->x = x;
-				pixel->y = y;
-				drawPixel(pixel);
-				i++;
-
-			}
-		}
+		updateScreenInfo(pixel, xStart, yStart, xEnd, yEnd, numPtr3);
 	}
 	
 	if (secondRemaining == 0)
@@ -922,72 +944,200 @@ void updateTime (Pixel *pixel)
 	
 }
 
-bool isGameWon(Pixel *pixel)
-{
-	int castleX[] = {255, 321, 387, 453, 519};
-	if (frog.lane == 1)
-	{
-		for (int i = 0; i <= 4; i++)
-		{
-			if (castleX[i] == frog.position)
-			{
-				return true;
-			}
+void cleanScreenMenu(Pixel *pixel, int xStart, int yStart, int xEnd, int yEnd){
+	short int *pausePtr = (short int *) gameMenu.pixel_data;
+	int i = 0;
+
+	for(int x = xStart; x <= xEnd; x++){
+		for(int y = yStart; y <= yEnd; y++){
+			
+			i ++;
+			pixel->x = x;
+			pixel->y = y;
+			pixel->color = pausePtr[i];
+			drawPixel(pixel);
+			
 		}
-		drawGameLost(pixel);
-		
 	}
-	return false;
 }
 
-void *carLaneThread(){
+void underline(Pixel *pixel, int startingX, int endingX, int y, int line2startX, int line2endX, int line2y)
+{
+	startingX += 202;
+	endingX += 202;
+	y += 250;
+	line2startX += 202;
+	line2endX += 202;
+	line2y += 250;
+	for (int x = startingX; x <= endingX; x++)
+	{
+		pixel->color = 0xFFF;
+		pixel->x = x;
+		pixel->y = y;
+		drawPixel(pixel);
+	}
+	cleanScreenMenu(pixel, line2startX, line2y, line2endX, line2y);
+	
+}
+
+
+void pauseScreen(Pixel *pixel, unsigned int *gpioPtr)
+{
+	
+	time_t pauseStart = time(NULL);
+			
+	drawGameMenu(pixel);
+	drawGameMenuScreen(pixel);
+	game.pause = true;
+	int buttonCode =-1;
+	bool restart = false;
+	do
+	{
+		delayMicroseconds(120000);
+		buttonCode = getButtonPressed(gpioPtr);
+		
+		if (buttonCode == 3 || buttonCode == 8)
+		{
+			game.pause = false;
+		}
+		
+		if (buttonCode == 4)//up
+		{
+			underline(pixel, 42, 356, 149, 90, 324, 225);
+			restart = true;
+		}
+		else if (buttonCode == 5)//down
+		{
+			underline(pixel, 90, 324, 225, 42, 356, 149);
+			restart = false;
+		}
+
+		
+	}while (game.pause);
+	
+	time_t pauseEnd = time(NULL);
+	game.pauseDuration = pauseEnd - pauseStart;
+
+	
+	//cleanBackground(pixel, 202, 245, 602, 545);
+
+	
+	
+}
+
+void *ImageThread(){
+	unsigned int *gpioPtr = getGPIOPtr();  
 	Pixel *pixel;
 	pixel = malloc(sizeof(Pixel));
 	int maxScreenX = 800;
 	int maxScreenY = 800;
 	bool collided = false;
-	//bool gotHeart = false;
-
-	int maxLane = 17;
-	
-	int cars[] = {561, 198, 198};
-	int carLanes[] = {15,16,14};
-	
 	int valuePackDrawn = 0;
-  
+	bool gotHeart = false;
+	int heartCount = 0;
+	
+	
+
+	
+	int car[6], log[6], snake[6], tweed[6];
+	generateRandomStartPos(car, 1);
+	int carLane[] = {16, 16, 15, 15, 14, 14};
+	int carDir[] = {RIGHT, RIGHT, LEFT, LEFT, RIGHT, RIGHT};
+	
+	
+	generateRandomStartPos(log, 2);
+	int logLane[] = {4, 4, 3, 3, 2, 2};
+	int logDir[] = {LEFT, LEFT, RIGHT, RIGHT, LEFT, LEFT};
+	bool onLog = false;
+	
+	generateRandomStartPos(snake, 2);
+	int snakeLane[] = {12,12, 11, 11, 10, 10};
+	int snakeDir[] = {LEFT, LEFT, RIGHT, RIGHT, LEFT, LEFT};
+	
+	generateRandomStartPos(tweed, 1);
+	int tweedLane[] = {8, 8, 7, 7, 6, 6};
+	int tweedDir[] = {RIGHT, RIGHT, LEFT, LEFT, RIGHT, RIGHT};
+
 	while(1){ 
-			if (cars[0] <= 205){
-				cars[0] = 561;
-			}
-			if (cars[1] >= 561){
-				cars[1] = 205;
-			}
-
-			delayMicroseconds(60000);
-			
-			drawCar(pixel, &cars[0], maxScreenX, carLanes[0], LEFT);
-			drawCar(pixel, &cars[1], maxScreenX, carLanes[1], RIGHT);
-			drawCar(pixel, &cars[2], maxScreenX, carLanes[2], RIGHT);
-
-			for (int i = 0; i < 3; i++){
-				collided = checkCollision(pixel, frog.position, cars[i], frog.lane, carLanes[i]);
-				if(collided){
-					//clean the dead frog from screen adn reset frog position
-					cleanBackground(pixel, frog.position,  152 + 35*frog.lane, frog.position + 33 ,  152 + 35*frog.lane + 33);
-					frog.position = 387;
-					frog.lane = 17;
-					frog.lives -= 1;
-					}
-				//~ gotHeart = isHeartObtained();
-				//~ if (gotHeart)
-				//~ {
-					//~ cleanBackground(pixel, heartPack.startX,  152 + 35*heartPack.lane, heartPack.startX + 33 ,  152 + 35*heartPack.lane + 33);
-					//~ frog.lives ++;
-				//~ }
+			for (int i = 0; i < 6; i++){
+				if(carLane[i] == 16 && car[i] >= 563){
+					car[i] = 208;
+				}
+				else if(carLane[i] == 15 && car[i] <= 208){
+					car[i] = 562;
+				}
+				else if(carLane[i] == 14 && car[i] >= 563 ){
+					car[i] = 166;
+				}
+				drawObj(pixel, &car[i], maxScreenX, carLane[i], carDir[i]);
 				
+				if(logLane[i] == 2 && log[i] <= 190){
+					log[i] = 562;
+				}
+				else if(logLane[i] == 3 && log[i] >= 563){
+					log[i] = 166;
+				}
+				else if(logLane[i] == 4 && log[i] <= 165){
+					log[i] = 562;
+				}
+				drawObj(pixel, &log[i], maxScreenX, logLane[i], logDir[i]);
+				
+				if(snakeLane[i] == 10 && snake[i] <= 191){
+					snake[i] = 591;
+				}	
+				else if(snakeLane[i] == 11 && snake[i] >= 563){
+					snake[i] = 191;
+				}
+				else if(snakeLane[i] == 12 && snake[i] <=191){
+					snake[i] = 591;
+				}
+				drawObj(pixel, &snake[i], maxScreenX, snakeLane[i], snakeDir[i]);
+				
+				if(tweedLane[i] == 8 && tweed[i] >= 563){
+					tweed[i] = 208;
+				}
+				else if(tweedLane[i] == 7 && tweed[i] <= 208){
+					tweed[i] = 562;
+				}
+				else if(tweedLane[i] == 6 && tweed[i] >= 563 ){
+					tweed[i] = 208;
+				}
+				drawObj(pixel, &tweed[i], maxScreenX, tweedLane[i], tweedDir[i]);
+			
 			}
+		
+			
+			
+			drawFrog(pixel, frog.position, maxScreenX, frog.lane, frog.direction);	
+			for (int i = 0; i < 6; i++){
+				collided = checkCollision(pixel, frog.position, car[i], frog.lane, carLane[i]);
+				if(collided){
+					resetFrog(pixel);
+				}
+				collided = checkCollision(pixel, frog.position, tweed[i], frog.lane, tweedLane[i]);
+				if(collided){
+					resetFrog(pixel);
+				}
+				
+				collided = checkCollision(pixel, frog.position, snake[i], frog.lane, snakeLane[i]);
+				if(collided){
+					resetFrog(pixel);
+				}
+				onLog = checkOnLog(pixel, log[i], logLane[i], logDir[i]);
+				if(onLog){
+					break;
+				}
+			}
+			if(frog.lane >= 2 && frog.lane <= 4 && onLog == false){
+				frog.onLog = false;
+				resetFrog(pixel);
+			}
+			
+		
+			time_t timeAdd = 0;
 			time_t finish = time(NULL);
-			frog.endTime = finish - frog.startTime;
+			frog.endTime = finish - frog.startTime - timeAdd; 
+
 			
 			
 			if (frog.endTime == 30)
@@ -1005,12 +1155,43 @@ void *carLaneThread(){
 			{
 				drawHeart(pixel);
 			}
-
-	
+			
+			if (heartCount == 0)
+			{
+				gotHeart = isHeartObtained();
+				if (gotHeart)
+				{
+					cleanBackground(pixel, heartPack.startX,  152 + 35*heartPack.lane, heartPack.startX + 33 ,  152 + 35*heartPack.lane + 33);
+					frog.lives ++;
+					heartCount = 1;
+				}
+			}
+			
+			
+			
+			
+			if (frog.direction == PAUSE)
+			{	
+				
+				pauseScreen(pixel, gpioPtr);
+			}	
+						
+			if (game.pauseDuration > 0)
+			{
+				timeAdd = game.pauseDuration;
+				game.pauseDuration = 0;
+			}
 		
+			if (isGameWon(pixel))
+			{
+				//drawGameScreen(pixel);
+				drawGameWon(pixel);
+			}
+			drawGameScreen(pixel);
+			
+	
+	}
 }	
-}
-
 
 void cleanMenu(Pixel *pixel, int xStart, int yStart, int xEnd, int yEnd){
 	short int *menuPtr = (short int *) MenuScreen.pixel_data;
@@ -1060,18 +1241,12 @@ void underlineQuit(Pixel *pixel)
 	}
 	cleanMenu(pixel, 176, 360, 612, 360);
 }
-      
-/* main function */
-int main(){
-	/* initialize + get FBS */
-	framebufferstruct = initFbInfo();
-	/* initialize a pixel */
-	Pixel *pixel;
-	pixel = malloc(sizeof(Pixel));
-	unsigned int *gpioPtr = getGPIOPtr();  
 
+void goToMainMenu(Pixel *pixel, unsigned int *gpioPtr)
+{
 	drawMainMenu(pixel);
-	
+	drawGameScreen(pixel);
+
 	bool start = false;
 	int buttonCode = 0;
 	
@@ -1096,70 +1271,108 @@ int main(){
 	
 	if (!start)
 	{
-		return 0;
+		exit(-1);
 		
 	}
+}      
+
+/* main function */
+int main(){
+		srand(time(NULL));
+	/* initialize + get FBS */
+	framebufferstruct = initFbInfo();
+	/* initialize a pixel */
+	Pixel *pixel;
+	pixel = malloc(sizeof(Pixel));
+	
+	unsigned int *gpioPtr = getGPIOPtr();  
+	
+	goToMainMenu(pixel, gpioPtr);
+
+	//~ drawMainMenu(pixel);
+	//~ drawGameScreen(pixel);
+
+	//~ bool start = false;
+	//~ int buttonCode = 0;
+	
+	//~ do
+	//~ {
+		
+		//~ buttonCode = getButtonPressed(gpioPtr);
+		
+		
+		//~ if (buttonCode == 4)
+		//~ {
+			//~ underlineStart(pixel);
+			//~ start = true;
+		//~ }
+		//~ else if (buttonCode == 5)
+		//~ {
+			//~ underlineQuit(pixel);
+			//~ start = false;
+		//~ }
+		
+	//~ }while (buttonCode != 8);
+	
+	//~ if (!start)
+	//~ {
+		//~ return 0;
+		
+	//~ }
 
 	
 	srand((unsigned int)time(NULL));
 	
 	frog.startTime = time(NULL);
-				
-
-	//create car thread
+	
+	drawGameBoard(pixel);
+	drawGameScreen(pixel);
+	
+	frog.position = 400;
+    frog.lane = 17;
+    frog.direction = -1;
+    frog.lives = 4;
+	frog.moves = 200;
+	frog.time = 150;
+	frog.maxLane = 17;
+		//create car thread
 	int rc;
-	pthread_t carThread;
+	pthread_t imageRenderThread;
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
-	rc = pthread_create(&carThread, &attr, carLaneThread, NULL);
-
-
-	int maxScreenX = 800;
-	int maxScreenY = 800;
-	frog.lane = 17;
-	frog.maxLane = 17;
-	int carLane = 5;
-	bool gotHeart = false;
-	int heartCount = 0;
+	rc = pthread_create(&imageRenderThread, &attr, ImageThread, NULL);
 	
-	int currentDirection = 1;
-	int frogDirection;
+	//~ while(1);
 
-	frog.position = 387;
-	frog.lives = 4;
-	frog.moves = 200;
-	frog.time = 200;
-	int testPoint = 800;
-	int currentCode = -2;	 
-	int cars[] = {561, 198, 198};
-	int carLanes[] = {15,16,14};
-	int carPos;
-	drawGameScreen(pixel);
-	bool buttonPressed = false;	
-	  // get gpio pointer
 	
-	drawFrog(pixel, frog.position, maxScreenX, frog.lane, -1);
+	//~ int maxScreenX = 800;
+	//~ int maxScreenY = 800;
+	//~ frog.lane = 17;
+	//~ int carLane = 5;
+
+	
+	//~ int currentDirection = 1;
+	//~ int frogDirection;
+
+	//~ frog.position = 373;
+	//~ int testPoint = 800;
+	//~ int currentCode = -2;	 
+	//~ int cars[] = {561, 198, 198};
+	//~ int carLanes[] = {15,16,14};
+	//~ int carPos;
+	//~ drawMainMenu(pixel);
+	//~ drawGameScreen(pixel);
+	//~ bool buttonPressed = false;	
+	  //~ // get gpio pointer
+   // unsigned int *gpioPtr = getGPIOPtr();  
+
+	//~ drawFrog(pixel, frog.position, maxScreenX, frog.lane, -1);
 	while(1){ 
-			delayMicroseconds(60000);
-			frogDirection = getDirectionFromCon(&frog.lane, &frog.position, gpioPtr);		
-			drawFrog(pixel, frog.position, maxScreenX, frog.lane, frogDirection);	
-			
-			if (heartCount == 0)
-			{
-				gotHeart = isHeartObtained();
-				if (gotHeart)
-				{
-					cleanBackground(pixel, heartPack.startX,  152 + 35*heartPack.lane, heartPack.startX + 33 ,  152 + 35*heartPack.lane + 33);
-					frog.lives ++;
-					heartCount = 1;
-				}
-			}
-			
-			if (isGameWon(pixel))
-			{
-				drawGameWon(pixel);
-			}
-			
+		if (game.pause == false)
+		{
+			delayMicroseconds(90000);
+			frog.direction = getDirectionFromCon(&frog.lane, &frog.position, gpioPtr);
+		}
 	}
 	//~ pthred_exit(NULL);
 	//~ int initStartPointArr = -30;
