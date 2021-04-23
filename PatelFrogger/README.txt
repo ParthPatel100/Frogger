@@ -7,7 +7,7 @@ To compile the project part 1 code:
   -go to the directory the project is saved
   -type "make" to compile the code
   -type "./myProg" to run the project code
-  -IF... console says "permission denied", then add a empty in in the main.c in the Source folder of the program, then "make", then "./myProg"
+  -IF... console says "permission denied", then add a empty line in the main.c in the Source folder of the program, save the main, then "make", then "./myProg"
   -the program will now be running 
   -player can move the joypad up or down to select menu item buttons
   -press "A" on selection
