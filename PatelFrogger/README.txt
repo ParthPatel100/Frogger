@@ -21,5 +21,6 @@ To compile the project part 1 code:
     -OR press start button again to resume game
    -VALUE PACK: after 30 seconds into the game, a heart will appear into a random safe lane (purple) at a random position
     -frog touching the heart means a life gets given to the player
+   -if game is lost or won, press any button on the controller to return to the main menu screen
   
 NOTE: The SNES Controller is highly sensitive
